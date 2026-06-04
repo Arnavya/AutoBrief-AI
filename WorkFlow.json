@@ -1,0 +1,943 @@
+{
+  "name": "Content Report Automation SKOOL-1",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "video",
+        "limit": 4,
+        "filters": {
+          "publishedAfter": "={{ new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }}",
+          "q": "{{ \"low latency OR c++ OR quant OR hft OR finance OR algorithmic trading OR quantitative finance\" }}"
+        },
+        "options": {
+          "order": "relevance",
+          "safeSearch": "moderate"
+        }
+      },
+      "id": "62ea0bf8-9f49-40a2-85d1-66cdb2c98d93",
+      "name": "Get Videos",
+      "type": "n8n-nodes-base.youTube",
+      "position": [
+        272,
+        16
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "V4dpgJgPqLldI1td",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos?",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "=AIzaSyAOowR8ucu8kE2LTkW0z798Cc69DlJaj2E"
+            },
+            {
+              "name": "id",
+              "value": "={{ $json.id.videoId }}"
+            },
+            {
+              "name": "part",
+              "value": "contentDetails, snippet, statistics"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5c6497d9-bbcc-41a9-874e-74da0f7316aa",
+      "name": "Get Video Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        464,
+        16
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "08ba3db9-6bcf-47f8-a74d-9e26f28cb08f",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ \n  (() => {\n    const duration = $json.items[0].contentDetails.duration;\n\n    // Helper function to convert ISO 8601 duration to seconds\n    const iso8601ToSeconds = iso8601 => {\n      const match = iso8601.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\n      const hours = parseInt(match[1] || 0, 10);\n      const minutes = parseInt(match[2] || 0, 10);\n      const seconds = parseInt(match[3] || 0, 10);\n      return hours * 3600 + minutes * 60 + seconds;\n    };\n\n    // Convert duration to seconds\n    const durationInSeconds = iso8601ToSeconds(duration);\n\n    // Check if greater than 210 seconds (3 minutes 30 seconds)\n    return durationInSeconds > 210;\n  })() \n}}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "16a55307-9493-457a-bf6f-c62c9b8c2f23",
+      "name": "Filter Out Shorts",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        624,
+        16
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"Title\": \"....\",\n    \"Link\": \"https://www.youtube.com/watch?v=A0OwvNOLNlw\",\n    \"Quick Summary\": \"...\",\n\t\"Deep Dive Summary\": \"...\"\n}"
+      },
+      "id": "ab397f23-43b6-46c1-98ab-25a8ca9cbd96",
+      "name": "Structured Output Parser1",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1424,
+        128
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "url": "https://api.apify.com/v2/acts/karamelo~youtube-transcripts/run-sync-get-dataset-items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"channelIDBoolean\": true,\n    \"channelNameBoolean\": true,\n    \"commentsBoolean\": false,\n    \"datePublishedBoolean\": true,\n    \"dateTextBoolean\": false,\n    \"descriptionBoolean\": false,\n    \"keywordsBoolean\": false,\n    \"likesBoolean\": false,\n    \"maxRetries\": 8,\n    \"proxyOptions\": {\n        \"useApifyProxy\": true,\n        \"apifyProxyGroups\": [\n            \"BUYPROXIES94952\"\n        ]\n    },\n    \"relativeDateTextBoolean\": false,\n    \"thumbnailBoolean\": false,\n    \"urls\": [\n        \"https://www.youtube.com/watch?v=b_nep8vMnkc\",\n        \"https://www.youtube.com/watch?v=mNHNktxbjdk\"\n    ],\n    \"viewCountBoolean\": false\n}",
+        "options": {}
+      },
+      "id": "6af8853f-536a-4963-af43-471ae7058edb",
+      "name": "Get Transcripts",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        480,
+        -256
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "youtubeData",
+        "options": {}
+      },
+      "id": "7c13856b-70df-43c5-b115-ac9323673c82",
+      "name": "Aggregate2",
+      "type": "n8n-nodes-base.aggregate",
+      "position": [
+        1552,
+        -16
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "9c25af44-0644-4e52-b617-98b8123e3a68",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1888,
+        608
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a445a767-8951-45e6-a606-e2c758b62e7d",
+              "name": "tavily",
+              "value": "={{$json.results.map(r => r.content).join('\\n\\n')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a3d38bd4-6cff-4611-89e1-384726bcedb6",
+      "name": "Edit Fields1",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1472,
+        752
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an expert content analyst and summarization AI. Your task is to analyze the provided YouTube transcript and generate two distinct summaries based on its full content, including spoken words, visual elements, and on-screen text.\n\nBefore processing any data, automatically correct these common transcription errors throughout ALL input text:\n- Replace \"NA10\", \"NADN\", \"nadn\", \"NA-10\", \"na10\" (case-insensitive) with \"n8n\"\n- These are speech-to-text errors where \"n8n\" (pronounced \"n-eight-n\") is misheard\n\nYour output must be in Markdown format and contain ONLY the following two sections:\n\n## Quick Summary\nA concise summary (2-3 sentences) that captures the video's core thesis, main arguments, and final conclusion. This summary should be written for a busy professional who needs to understand the video's main point in under 15 seconds.\n\n## Deep Dive Summary\nA detailed, structured breakdown of the video's key information. Use 3-5 bullet points. Each bullet point should represent a major concept, step-by-step process, or critical takeaway from the video. Follow each bullet point with a 1-2 sentence explanation to provide context.\n\nDo not include any conversational preamble or concluding remarks in your response.\n\nDo not use dahses. Use bullet points (the circles) when writing the deep dive response.\n\noutput should follow this format: \n\n{\n\t\"Title\": \"....\",\n    \"Link\": \"https://www.youtube.com/watch?v=A0OwvNOLNlw\",\n    \"Quick Summary\": \"...\",\n\t\"Deep Dive Summary\": \"...\"\n}\n\n\n\nyou are being passed the videoID, make sure the video ID will be repeated at the end of the \"Link\" output i.e. https://www.youtube.com/watch?v={{ $json.videoId }}\n\nIF THE TRANSCRIPT IS IN ANY LANGUAGE OTHER THAN ENGLISH, MAKE SURE TO TRANSLATE IT TO ENGLISH AND HAVE YOUR OUTPUT BE IN ENGLISH"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "e70d67c9-61f2-43cd-8122-94d2ef3f1930",
+      "name": "Transcript Analysis",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        1216,
+        -64
+      ],
+      "typeVersion": 1.7
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.allData }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an expert AI-powered HTML report generator. Your task is to parse a JSON object containing data from multiple sources and generate a clean, scannable HTML email digest with actionable insights and business opportunities.\n\n**INPUT FORMAT:**\nYou will receive a JSON object with these top-level keys:\n\n* `youtubeData` (array of objects)\n* `tavilyData` (string)\n\n**OUTPUT REQUIREMENTS:**\nGenerate ONLY valid HTML with no additional text, explanations, markdown, or code blocks.\n\n**DATA SELECTION - TOP HIGHLIGHTS ONLY:**\n\n* YouTube: Show only the TOP 3 videos from youtubeData array\n* Tavily: Show only the TOP 3 news stories extracted from tavilyData\n\n**STYLING GUIDE:**\nUse inline styles for all elements:\n\n* Header banner:\n  `background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);`\n\n* Section headers:\n  Use gradient backgrounds with section colors\n\n* Cards:\n  `background: white; margin-bottom: 20px; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid [COLOR];`\n\n* Section divider:\n  `<hr style=\"border: none; border-top: 2px solid #e0e0e0; margin: 40px 0;\">`\n\n* Main container:\n  `max-width: 900px; margin: 0 auto; font-family: Arial, Helvetica, sans-serif; color: #333; line-height: 1.6;`\n\n**SECTION COLORS:**\n\n* YouTube: #FF0000 to #CC0000\n* Tavily News: #20808d to #1a6b77\n* Business Opportunities: #11998e to #38ef7d\n\n**HTML STRUCTURE:**\n\n### 1. Header Banner\n\nCreate a hero section with:\n\nTitle:\n📊 Your Daily AI & Automation Report\n\nSubtitle:\nCurated insights for automation builders\n\n---\n\n### 2. TL;DR Section\n\nCreate a highlighted summary box with:\n\n* Background color: #fff3cd\n* Left border: #ffc107\n* Padding: 20px\n* Border radius: 8px\n\nGenerate 3-5 concise bullet points summarizing:\n\n* Major AI developments\n* Important automation trends\n* Emerging business opportunities\n* Key takeaways from YouTube\n* Key takeaways from Tavily news\n\nFocus on actionable insights.\n\n---\n\n### 3. Section Divider\n\n---\n\n### 4. YouTube Section\n\nHeader:\n🚀 Trending on YouTube\n\nUse a red gradient background.\n\nShow ONLY the TOP 3 videos from youtubeData.\n\nFor each video create a card containing:\n\n* Clickable title linking to:\n  `item.output.Link`\n\n* Title text:\n  `item.output.Title`\n\n* Paragraph:\n  `item.output[\"Quick Summary\"]`\n\n* Expandable details section:\n  Label:\n  📖 Deep Dive\n\n* Inside the details section show:\n  `item.output[\"Deep Dive Summary\"]`\n\nUse this style for the deep dive content:\n\n`padding: 15px; background-color: #f8f9fa; border-left: 3px solid #3498db; margin-top: 10px; border-radius: 5px; line-height: 1.8; color: #555;`\n\n---\n\n### 5. Section Divider\n\n---\n\n### 6. Tavily News Section\n\nHeader:\n📰 Tavily News\n\nUse a teal gradient background.\n\nCreate a light gray container.\n\nExtract and display ONLY the TOP 3 most important stories from tavilyData.\n\nFor each story display:\n\n* h4 title\n* description paragraph\n\nIf Tavily content contains:\n\n* citation markers\n* source references\n* URLs\n* footnotes\n\nclean them from the displayed content unless they improve readability.\n\nFocus on stories related to:\n\n* Artificial Intelligence\n* Automation\n* Startups\n* SaaS\n* Technology\n* Business\n* Venture Capital\n* Productivity\n* Digital Transformation\n\nPrioritize stories with the highest business impact.\n\n---\n\n### 7. Section Divider\n\n---\n\n### 8. Business Opportunities & Money-Making Ideas\n\nHeader:\n💰 Business Opportunities & Money-Making Ideas\n\nUse a green gradient background.\n\nGenerate 5-7 high-quality opportunities based on analysis of:\n\n* YouTube trends\n* Tavily news\n* AI developments\n* Emerging technologies\n* Automation trends\n* Market shifts\n* Startup activity\n* Business pain points\n\nFor each opportunity include:\n\n**Opportunity Title**\n\nThen provide:\n\n**Problem:**\nWhat problem exists?\n\n**Opportunity:**\nWhat can be built or sold?\n\n**Target Customer:**\nWho would pay for it?\n\n**Why Now:**\nWhy is the timing attractive?\n\n**Revenue Model:**\nExamples:\n\n* SaaS subscription\n* Agency retainer\n* Consulting\n* Digital products\n* Marketplace fees\n* Lead generation\n* Memberships\n* Licensing\n\n**Implementation Approach:**\nHow someone could realistically start building it.\n\nFocus on opportunities such as:\n\n* SaaS products\n* AI agents\n* Vertical AI solutions\n* Automation agencies\n* Consulting services\n* Lead generation businesses\n* Digital products\n* Newsletters\n* Marketplaces\n* B2B software\n* AI-powered tools\n* Workflow automation services\n* Content businesses\n\nPrioritize:\n\n* Emerging trends\n* Growing demand signals\n* Repeated pain points\n* Underserved niches\n* Fast-growing markets\n* Practical monetization paths\n\nAvoid generic ideas.\n\nMake every opportunity feel actionable and realistic.\n\n---\n\n### BUSINESS OPPORTUNITY GENERATION RULES\n\nAnalyze:\n\n* YouTube trends\n* Tavily news\n* AI adoption patterns\n* Technology breakthroughs\n* Business pain points\n* Automation opportunities\n* Emerging startup categories\n* Market shifts\n* Startup funding trends\n* Enterprise AI adoption\n\nIdentify:\n\n* Problems businesses face\n* Inefficient workflows\n* New consumer behaviors\n* New markets forming\n* Areas where AI can replace manual work\n* Opportunities hidden inside news stories\n* Commercial applications of trending technologies\n\nConvert those signals into realistic business opportunities.\n\nRecommendations should feel like something a founder, consultant, agency owner, freelancer, or solo entrepreneur could realistically build.\n\nThe business opportunity section should be the most valuable part of the report.\n\n---\n\n### KEY FORMATTING RULES\n\nDeep Dive content style:\n\n`padding: 15px; background-color: #f8f9fa; border-left: 3px solid #3498db; margin-top: 10px; border-radius: 5px; line-height: 1.8; color: #555;`\n\nTL;DR list items:\n\n* No card styling\n* No shadows\n* No rounded boxes\n* Keep simple and readable\n\nBusiness opportunities:\n\n* Use numbered formatting\n* Clearly separate each idea\n* Make them easy to scan\n* Highlight titles in bold\n* Use spacing between opportunities\n\n---\n\n### HTML QUALITY REQUIREMENTS\n\n* Use semantic HTML where possible\n* Ensure mobile-friendly formatting\n* Keep spacing consistent\n* Make section headers visually distinct\n* Make links clearly visible\n* Ensure readability in email clients\n* Keep the report professional and modern\n\n---\n\n### CRITICAL REMINDERS\n\n* Output ONLY valid HTML\n* Do NOT output markdown\n* Do NOT output code blocks\n* Do NOT output explanations\n* Do NOT output surrounding text\n* Show ONLY top 3 YouTube videos\n* Show ONLY top 3 Tavily news stories\n* Generate 5-7 business opportunities\n* Clean Tavily citation markers and source references where appropriate\n* Ensure complete HTML output\n* Make the report visually clean and professional\n* Business opportunities must be directly connected to the trends found in the provided data\n* Prioritize actionable, revenue-generating ideas over generic observations\n* The final output must be ready to send as an email digest without further editing\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "f39d0117-47fb-4697-871d-33f0868ac19e",
+      "name": "Report Generator",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        2288,
+        448
+      ],
+      "typeVersion": 1.7
+    },
+    {
+      "parameters": {
+        "sendTo": "pheonix45810@gmail.com",
+        "subject": "=Daily Content Report {{ $now.toFormat('yyyy-MM-dd') }}",
+        "message": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "9072e21b-a583-4d62-b2dc-c166403bed9a",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        2736,
+        448
+      ],
+      "webhookId": "43d14f3b-9714-41e3-9692-60d9674343f2",
+      "typeVersion": 2.1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yStOsKu62qn0bg0m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "allData",
+        "options": {}
+      },
+      "id": "5e6eb55a-4041-41e1-8c09-41f7bd5da7a2",
+      "name": "Aggregate3",
+      "type": "n8n-nodes-base.aggregate",
+      "position": [
+        2048,
+        640
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appE71JpJpnZiStPM",
+          "mode": "list",
+          "cachedResultName": "AI_engineering_Project",
+          "cachedResultUrl": "https://airtable.com/appE71JpJpnZiStPM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblj9MqKbRDIlxoeh",
+          "mode": "list",
+          "cachedResultName": "YouTube Videos",
+          "cachedResultUrl": "https://airtable.com/appE71JpJpnZiStPM/tblj9MqKbRDIlxoeh"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $('Filter Out Shorts').item.json.items[0].snippet.title }}",
+            "Thumbnail": "=[{ \"url\": \"{{ $('Filter Out Shorts').item.json.items[0].snippet.thumbnails.high.url }}\" }]",
+            "Quick Summary": "={{ $json.output[\"Quick Summary\"] }}",
+            "Deep Dive Summary": "={{ $json.output[\"Deep Dive Summary\"] }}",
+            "Views": "={{ $('Filter Out Shorts').item.json.items[0].statistics.viewCount }}",
+            "Channel": "={{ $('Filter Out Shorts').item.json.items[0].snippet.channelTitle }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Thumbnail",
+              "displayName": "Thumbnail",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Quick Summary",
+              "displayName": "Quick Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Deep Dive Summary",
+              "displayName": "Deep Dive Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Views",
+              "displayName": "Views",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e3aca10c-bd0d-46e2-8271-b9e40242da60",
+      "name": "YouTube Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "position": [
+        1616,
+        -208
+      ],
+      "typeVersion": 2.1,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "5rpCxj46e9L869je",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appE71JpJpnZiStPM",
+          "mode": "list",
+          "cachedResultName": "AI_engineering_Project",
+          "cachedResultUrl": "https://airtable.com/appE71JpJpnZiStPM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblY3u8BnHslJY55Q",
+          "mode": "list",
+          "cachedResultName": "Tavily News",
+          "cachedResultUrl": "https://airtable.com/appE71JpJpnZiStPM/tblY3u8BnHslJY55Q"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Headline": "={{ $json.headline }}",
+            "Summary": "={{ $json.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Headline",
+              "displayName": "Headline",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date Added",
+              "displayName": "Date Added",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "edd15384-8c2c-49b1-9a41-72013090a0e3",
+      "name": "Perplexity Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "position": [
+        1536,
+        992
+      ],
+      "typeVersion": 2.1,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "5rpCxj46e9L869je",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.results.map(r => r.content).join('\\n\\n')}}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a JSON formatting assistant. Your only job is to extract news stories from the input text and return valid JSON.\n\nRules:\n\n1. Extract exactly 3 news stories from the input.\n2. Each story must contain:\n\n   * \"headline\" (string)\n   * \"content\" (string)\n3. Remove all citation markers such as [1], [2], [1][2] from the content.\n4. Return ONLY valid JSON.\n5. Do not include explanations, markdown, comments, or code fences.\n6. Keep headlines concise (under 100 characters if possible).\n7. Include all relevant details in the content field.\n8. If fewer than 3 stories are available, return as many valid stories as can be extracted.\n\nReturn JSON in exactly this format:\n\n{\n\"stories\": [\n{\n\"headline\": \"Story headline here\",\n\"content\": \"Full story content without citations\"\n},\n{\n\"headline\": \"Second story headline\",\n\"content\": \"Second story content without citations\"\n},\n{\n\"headline\": \"Third story headline\",\n\"content\": \"Third story content without citations\"\n}\n]\n}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "c1f2e814-0933-41f1-91c9-8962e805bd43",
+      "name": "Format Message",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        832,
+        912
+      ],
+      "typeVersion": 1.7
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"stories\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"headline\": {\n            \"type\": \"string\"\n          },\n          \"content\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"headline\",\n          \"content\"\n        ],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\n    \"stories\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "id": "6f4e0f09-bacf-4f0b-8c38-e897eaf8a9d6",
+      "name": "Structured Output Parser4",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        976,
+        1120
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        752
+      ],
+      "id": "3c69cbcd-2f1f-4273-87f6-c39797a3c71b",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1248,
+        128
+      ],
+      "id": "3750a223-adf8-49c0-a41c-01abbf5f1241",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0oE4Xx9VnQ4ydNrO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "n8n",
+        "options": {
+          "max_results": 5,
+          "time_range": "day"
+        }
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        480,
+        752
+      ],
+      "id": "c3c45dc3-fe69-414f-b524-935bcac171d8",
+      "name": "Search",
+      "credentials": {
+        "tavilyApi": {
+          "id": "GmZhvY1sqb889qIR",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        640
+      ],
+      "id": "c67df3cd-8cbc-4b46-95bb-1739c1e21e95",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0oE4Xx9VnQ4ydNrO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        800,
+        1136
+      ],
+      "id": "693c4fc1-71d7-4c87-b6bf-8624c59754f2",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "Q35jE8wrcJxYvLiU",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $json.output.stories.map(story => ({\n  json: story\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        944
+      ],
+      "id": "c3060a20-2e56-4762-85f0-480fc7062271",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const v = item.json;\n\n  return {\n    json: {\n      videoId: v.videoId,\n      prompt: `\nVIDEO ID: ${v.videoId}\nTITLE: ${v.title}\n\nCHANNEL: ${v.context.match(/CHANNEL:\\s*(.*)/)?.[1] || \"Unknown\"}\n\nDESCRIPTION:\n${v.context}\n\nTAGS:\n${(v.bullet_summary || []).join(\", \")}\n\nINTENT: ${v.intent}\nQUALITY SCORE: ${v.quality_score}\n      `.trim()\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        32
+      ],
+      "id": "72b7c9db-c270-4344-a3ff-4adc1e06f827",
+      "name": "Clean Prompt Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "function isoDurationToSeconds(iso) {\n  const match = iso.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\n  return (\n    (parseInt(match?.[1] || 0) * 3600) +\n    (parseInt(match?.[2] || 0) * 60) +\n    (parseInt(match?.[3] || 0))\n  );\n}\n\nfunction extractTimestamps(text) {\n  if (!text) return [];\n\n  const regex = /(\\d{1,2}:\\d{2}(?::\\d{2})?)\\s*[-–]?\\s*(.+)/g;\n  const results = [];\n  let match;\n\n  while ((match = regex.exec(text)) !== null) {\n    results.push({\n      time: match[1],\n      label: match[2].trim(),\n    });\n  }\n\n  return results;\n}\n\nfunction cleanText(text = \"\") {\n  return text\n    .replace(/https?:\\/\\/\\S+/g, \"\") // remove links\n    .replace(/\\n{2,}/g, \"\\n\") // normalize spacing\n    .trim();\n}\n\nfunction extractTopics(text, tags = []) {\n  const words = text\n    .toLowerCase()\n    .split(/[^a-zA-Z0-9]+/)\n    .filter(w => w.length > 4);\n\n  const freq = {};\n  for (const w of words) {\n    freq[w] = (freq[w] || 0) + 1;\n  }\n\n  const topWords = Object.entries(freq)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 8)\n    .map(([w]) => w);\n\n  return [...new Set([...tags.slice(0, 10), ...topWords])].slice(0, 12);\n}\n\nreturn items.flatMap(item => {\n  const video = item.json.items?.[0];\n  if (!video) return [];\n\n  const snippet = video.snippet || {};\n  const description = snippet.description || \"\";\n  const title = snippet.title || \"\";\n\n  const cleanedDescription = cleanText(description);\n  const timestamps = extractTimestamps(description);\n\n  const output = {\n    videoId: video.id,\n    title,\n    channel: snippet.channelTitle,\n    publishedAt: snippet.publishedAt,\n\n    language: snippet.defaultLanguage || snippet.defaultAudioLanguage || \"unknown\",\n\n    durationSeconds: video.contentDetails?.duration\n      ? isoDurationToSeconds(video.contentDetails.duration)\n      : null,\n\n    tags: snippet.tags || [],\n\n    timestamps,\n\n    summary_input: cleanedDescription,\n\n    topics: extractTopics(cleanedDescription, snippet.tags || []),\n\n    sourceType: \"youtube_metadata\"\n  };\n\n  return [{ json: output }];\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        384
+      ],
+      "id": "0935a9ce-a076-4327-aec0-275e923c3514",
+      "name": "Video_Intelligence_Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "function buildContext(video) {\n  const title = video.title || \"\";\n  const channel = video.channel || \"\";\n  const desc = video.summary_input || \"\";\n\n  return `TITLE: ${title}\nCHANNEL: ${channel}\n\nCONTENT:\n${desc}`;\n}\n\nfunction extractChapters(timestamps = []) {\n  return timestamps.map(t => ({\n    time: t.time,\n    topic: t.label\n  }));\n}\n\nfunction detectIntent(text = \"\") {\n  const t = text.toLowerCase();\n\n  if (t.includes(\"trading\") || t.includes(\"market\") || t.includes(\"stock\")) return \"finance\";\n  if (t.includes(\"ai\") || t.includes(\"claude\") || t.includes(\"automation\")) return \"ai_tools\";\n  if (t.includes(\"news\")) return \"news\";\n\n  return \"general\";\n}\n\nfunction scoreQuality(video) {\n  let score = 50;\n\n  if (video.durationSeconds > 600) score += 10;\n  if (video.timestamps?.length > 3) score += 10;\n  if (video.tags?.length > 5) score += 10;\n  if (video.summary_input?.length > 500) score += 10;\n\n  return Math.min(score, 100);\n}\n\nreturn items.map(item => {\n  const v = item.json;\n\n  return {\n    json: {\n      videoId: v.videoId,\n      title: v.title,\n\n      context: buildContext(v),\n\n      bullet_summary: [\n        `Channel: ${v.channel}`,\n        `Duration: ${v.durationSeconds}s`,\n        `Language: ${v.language}`,\n        `Topics: ${(v.topics || []).slice(0, 8).join(\", \")}`\n      ],\n\n      chapters: extractChapters(v.timestamps || []),\n\n      intent: detectIntent(v.summary_input),\n\n      quality_score: scoreQuality(v)\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        384
+      ],
+      "id": "b74d7f89-85b7-48b0-9cf9-f1df1ba1c411",
+      "name": "LLM Context Builder Node"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Report Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Videos": {
+      "main": [
+        [
+          {
+            "node": "Get Video Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video Data": {
+      "main": [
+        [
+          {
+            "node": "Filter Out Shorts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Transcripts": {
+      "main": [
+        []
+      ]
+    },
+    "Report Generator": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Out Shorts": {
+      "main": [
+        [
+          {
+            "node": "Video_Intelligence_Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Transcript Analysis": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "YouTube Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Transcript Analysis",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Format Message",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get Videos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Transcript Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Report Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Format Message",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "Transcript Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video_Intelligence_Builder": {
+      "main": [
+        [
+          {
+            "node": "LLM Context Builder Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Context Builder Node": {
+      "main": [
+        [
+          {
+            "node": "Clean Prompt Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "963f2523-a840-4cb8-8ad9-7c2610271896",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f1dc2f7e1bffecdbd6a6f0c32aea044130a51a9b575af569d9d2b415a1d9720e"
+  },
+  "nodeGroups": [],
+  "id": "RwRDifyeQvPwbFKD",
+  "tags": []
+}
